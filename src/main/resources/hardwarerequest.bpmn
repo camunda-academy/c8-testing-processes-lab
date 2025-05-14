@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.8.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.2.0" camunda:diagramRelationId="2035b97f-f177-47e2-a447-6dd5ef704a0d">
+  <bpmn:process id="HardwareRequestProcess" name="Hardware Request Process" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_HardwareRequired" name="New Hardware required">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="name" label="Name" type="string" />
+          <camunda:formField id="price" label="Price" type="long" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_0406ta1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_0406ta1" sourceRef="StartEvent_HardwareRequired" targetRef="Gateway_OrderAmount" />
+    <bpmn:userTask id="UserTask_ApproveOrder" name="Approve Order">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="approved" label="Approve?" type="boolean" />
+        </camunda:formData>
+        <zeebe:assignmentDefinition assignee="approver" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>PriceAbove1000Flow</bpmn:incoming>
+      <bpmn:outgoing>Flow_1n1rp4r</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics>
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="=approvers" inputElement="approver" outputCollection="approved" outputElement="=approved" />
+        </bpmn:extensionElements>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_1n1rp4r" sourceRef="UserTask_ApproveOrder" targetRef="Gateway_1dpgaqe" />
+    <bpmn:serviceTask id="ServiceTask_CheckAvailability" name="Check Availability" camunda:asyncBefore="true" camunda:delegateExpression="${checkAvailability}">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="check-availability" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_10kayko</bpmn:incoming>
+      <bpmn:outgoing>Flow_0cm5ni3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_HardwareAvailable" name="Hardware available?">
+      <bpmn:incoming>Flow_0cm5ni3</bpmn:incoming>
+      <bpmn:outgoing>HardwareAvailableFlow</bpmn:outgoing>
+      <bpmn:outgoing>HardwareNotAvailableFlow</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0cm5ni3" sourceRef="ServiceTask_CheckAvailability" targetRef="Gateway_HardwareAvailable" />
+    <bpmn:sequenceFlow id="HardwareAvailableFlow" name="yes" sourceRef="Gateway_HardwareAvailable" targetRef="Gateway_0xj6kw4">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=available</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="ServiceTask_SendHardware" name="Send Hardware" camunda:asyncBefore="true" camunda:delegateExpression="${sendHardware}">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="send-hardware" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1sglzj5</bpmn:incoming>
+      <bpmn:outgoing>Flow_0gy2aps</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="HardwareNotAvailableFlow" name="no" sourceRef="Gateway_HardwareAvailable" targetRef="ServiceTask_OrderHardware">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=available != true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="ServiceTask_OrderHardware" name="Order Hardware" camunda:asyncBefore="true" camunda:delegateExpression="${dummy}">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="order-hardware" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>HardwareNotAvailableFlow</bpmn:incoming>
+      <bpmn:outgoing>Flow_0dov2mc</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_0xj6kw4">
+      <bpmn:incoming>HardwareAvailableFlow</bpmn:incoming>
+      <bpmn:incoming>Flow_0w082ug</bpmn:incoming>
+      <bpmn:outgoing>Flow_1sglzj5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_1sglzj5" sourceRef="Gateway_0xj6kw4" targetRef="ServiceTask_SendHardware" />
+    <bpmn:sequenceFlow id="Flow_0w082ug" sourceRef="Event_HardwareReceived" targetRef="Gateway_0xj6kw4" />
+    <bpmn:endEvent id="EndEvent_HardwareSent" name="Hardware sent">
+      <bpmn:incoming>Flow_0gy2aps</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0gy2aps" sourceRef="ServiceTask_SendHardware" targetRef="EndEvent_HardwareSent" />
+    <bpmn:exclusiveGateway id="Gateway_OrderAmount" name="&#62; 1000€">
+      <bpmn:incoming>Flow_0406ta1</bpmn:incoming>
+      <bpmn:outgoing>PriceAbove1000Flow</bpmn:outgoing>
+      <bpmn:outgoing>PriceNotAbove1000Flow</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="PriceAbove1000Flow" name="yes" sourceRef="Gateway_OrderAmount" targetRef="UserTask_ApproveOrder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=price &gt; 1000</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:exclusiveGateway id="Gateway_1u209sl">
+      <bpmn:incoming>PriceNotAbove1000Flow</bpmn:incoming>
+      <bpmn:incoming>Flow_18eesn2</bpmn:incoming>
+      <bpmn:outgoing>Flow_10kayko</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_10kayko" sourceRef="Gateway_1u209sl" targetRef="ServiceTask_CheckAvailability" />
+    <bpmn:sequenceFlow id="PriceNotAbove1000Flow" name="no" sourceRef="Gateway_OrderAmount" targetRef="Gateway_1u209sl">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=price &lt;= 1000</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0n8secp" sourceRef="Gateway_WaitForHardware" targetRef="Event_HardwareReceived" />
+    <bpmn:sequenceFlow id="Flow_0rnnb9w" sourceRef="Gateway_WaitForHardware" targetRef="Event_1Week" />
+    <bpmn:intermediateCatchEvent id="Event_1Week" name="1 Week">
+      <bpmn:incoming>Flow_0rnnb9w</bpmn:incoming>
+      <bpmn:outgoing>Flow_04lnpsl</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_0wv3dif">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:eventBasedGateway id="Gateway_WaitForHardware" camunda:asyncBefore="true">
+      <bpmn:incoming>Flow_1j8jani</bpmn:incoming>
+      <bpmn:outgoing>Flow_0n8secp</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0rnnb9w</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:exclusiveGateway id="Gateway_1dpgaqe" name="approved?">
+      <bpmn:incoming>Flow_1n1rp4r</bpmn:incoming>
+      <bpmn:outgoing>Flow_18eesn2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0fl34uz</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_18eesn2" name="yes" sourceRef="Gateway_1dpgaqe" targetRef="Gateway_1u209sl">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=all(approved)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="EndEvent_OrderRejected" name="Order rejected">
+      <bpmn:incoming>Flow_0fl34uz</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0fl34uz" name="no" sourceRef="Gateway_1dpgaqe" targetRef="EndEvent_OrderRejected">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=all(approved) = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_04lnpsl" sourceRef="Event_1Week" targetRef="UserTask_CallWithSupplier" />
+    <bpmn:sequenceFlow id="Flow_0sfs5az" sourceRef="UserTask_CallWithSupplier" targetRef="Gateway_1y8zopv" />
+    <bpmn:exclusiveGateway id="Gateway_1y8zopv">
+      <bpmn:incoming>Flow_0sfs5az</bpmn:incoming>
+      <bpmn:incoming>Flow_0dov2mc</bpmn:incoming>
+      <bpmn:outgoing>Flow_1j8jani</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_1j8jani" sourceRef="Gateway_1y8zopv" targetRef="Gateway_WaitForHardware" />
+    <bpmn:boundaryEvent id="Event_HardwareStolen" name="Hardware stolen" attachedToRef="ServiceTask_SendHardware">
+      <bpmn:outgoing>Flow_0wdekne</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_0s74z4l" errorRef="Error_05c6z6z" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_0wdekne" sourceRef="Event_HardwareStolen" targetRef="SendTask_InformRequester" />
+    <bpmn:endEvent id="EndEvent_HardwareStolen" name="Hardware stolen">
+      <bpmn:incoming>Flow_1fmne0o</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1fmne0o" sourceRef="SendTask_InformRequester" targetRef="EndEvent_HardwareStolen" />
+    <bpmn:intermediateCatchEvent id="Event_HardwareReceived" name="Hardware received">
+      <bpmn:incoming>Flow_0n8secp</bpmn:incoming>
+      <bpmn:outgoing>Flow_0w082ug</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_10coumg" messageRef="Message_1qkrh4o" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_0dov2mc" sourceRef="ServiceTask_OrderHardware" targetRef="Gateway_1y8zopv" />
+    <bpmn:sendTask id="SendTask_InformRequester" name="Inform Requester">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="inform-requester" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0wdekne</bpmn:incoming>
+      <bpmn:outgoing>Flow_1fmne0o</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:userTask id="UserTask_CallWithSupplier" name="Call Supplier">
+      <bpmn:incoming>Flow_04lnpsl</bpmn:incoming>
+      <bpmn:outgoing>Flow_0sfs5az</bpmn:outgoing>
+    </bpmn:userTask>
+  </bpmn:process>
+  <bpmn:message id="Message_11lgnyw" name="confirmation">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=confirmationMessage" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_02hl895" name="rejection">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=rejectionMessage" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_1ppif04" name="receive" />
+  <bpmn:error id="Error_05c6z6z" name="stolen" errorCode="stolen" camunda:errorMessage="Hardware stolen" />
+  <bpmn:message id="Message_1qkrh4o" name="hardwareReceived">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=orderId" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="HardwareRequestProcess">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_HardwareRequired">
+        <dc:Bounds x="132" y="152" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="116" y="195" width="73" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0oi1xzv_di" bpmnElement="UserTask_ApproveOrder">
+        <dc:Bounds x="260" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_04aex4u_di" bpmnElement="ServiceTask_CheckAvailability">
+        <dc:Bounds x="520" y="130" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0zedfnv_di" bpmnElement="Gateway_HardwareAvailable" isMarkerVisible="true">
+        <dc:Bounds x="645" y="145" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="645" y="108" width="50" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_18r2rq9_di" bpmnElement="ServiceTask_SendHardware">
+        <dc:Bounds x="1180" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ogkmec_di" bpmnElement="ServiceTask_OrderHardware">
+        <dc:Bounds x="710" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0xj6kw4_di" bpmnElement="Gateway_0xj6kw4" isMarkerVisible="true">
+        <dc:Bounds x="1105" y="145" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1shjiv9_di" bpmnElement="EndEvent_HardwareSent">
+        <dc:Bounds x="1402" y="152" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1384" y="195" width="72" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1b7ix8l_di" bpmnElement="Gateway_OrderAmount" isMarkerVisible="true">
+        <dc:Bounds x="195" y="145" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="199" y="121" width="41" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1u209sl_di" bpmnElement="Gateway_1u209sl" isMarkerVisible="true">
+        <dc:Bounds x="445" y="145" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_12mjx7q_di" bpmnElement="Event_1Week">
+        <dc:Bounds x="992" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="991" y="345" width="38" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1vj8efz_di" bpmnElement="Gateway_WaitForHardware">
+        <dc:Bounds x="920" y="245" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1dpgaqe_di" bpmnElement="Gateway_1dpgaqe" isMarkerVisible="true">
+        <dc:Bounds x="385" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="445" y="263" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1eo2fes_di" bpmnElement="EndEvent_OrderRejected">
+        <dc:Bounds x="452" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="435" y="345" width="71" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1y8zopv_di" bpmnElement="Gateway_1y8zopv" isMarkerVisible="true">
+        <dc:Bounds x="835" y="245" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_00by0ir_di" bpmnElement="EndEvent_HardwareStolen">
+        <dc:Bounds x="1402" y="282" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1380" y="325" width="81" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1xedkq3_di" bpmnElement="Event_HardwareReceived">
+        <dc:Bounds x="992" y="202" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="986" y="248" width="48" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0p5v92x_di" bpmnElement="SendTask_InformRequester">
+        <dc:Bounds x="1260" y="260" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0qjmm9c_di" bpmnElement="UserTask_CallWithSupplier">
+        <dc:Bounds x="1060" y="280" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_19zb2iv_di" bpmnElement="Event_HardwareStolen">
+        <dc:Bounds x="1212" y="192" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1239" y="223" width="81" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0406ta1_di" bpmnElement="Flow_0406ta1">
+        <di:waypoint x="168" y="170" />
+        <di:waypoint x="195" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1n1rp4r_di" bpmnElement="Flow_1n1rp4r">
+        <di:waypoint x="360" y="270" />
+        <di:waypoint x="385" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0cm5ni3_di" bpmnElement="Flow_0cm5ni3">
+        <di:waypoint x="620" y="170" />
+        <di:waypoint x="645" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0n5kesv_di" bpmnElement="HardwareAvailableFlow">
+        <di:waypoint x="695" y="170" />
+        <di:waypoint x="1105" y="170" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="710" y="152" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1xlm435_di" bpmnElement="HardwareNotAvailableFlow">
+        <di:waypoint x="670" y="195" />
+        <di:waypoint x="670" y="270" />
+        <di:waypoint x="710" y="270" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="679" y="253" width="13" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1sglzj5_di" bpmnElement="Flow_1sglzj5">
+        <di:waypoint x="1155" y="170" />
+        <di:waypoint x="1180" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0w082ug_di" bpmnElement="Flow_0w082ug">
+        <di:waypoint x="1028" y="220" />
+        <di:waypoint x="1130" y="220" />
+        <di:waypoint x="1130" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0gy2aps_di" bpmnElement="Flow_0gy2aps">
+        <di:waypoint x="1280" y="170" />
+        <di:waypoint x="1402" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ltqv8h_di" bpmnElement="PriceAbove1000Flow">
+        <di:waypoint x="219" y="194" />
+        <di:waypoint x="221" y="270" />
+        <di:waypoint x="260" y="270" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="221" y="256" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10kayko_di" bpmnElement="Flow_10kayko">
+        <di:waypoint x="495" y="170" />
+        <di:waypoint x="520" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10wlrw9_di" bpmnElement="PriceNotAbove1000Flow">
+        <di:waypoint x="245" y="170" />
+        <di:waypoint x="445" y="170" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="314" y="152" width="13" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0n8secp_di" bpmnElement="Flow_0n8secp">
+        <di:waypoint x="945" y="245" />
+        <di:waypoint x="945" y="220" />
+        <di:waypoint x="992" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0rnnb9w_di" bpmnElement="Flow_0rnnb9w">
+        <di:waypoint x="945" y="295" />
+        <di:waypoint x="945" y="320" />
+        <di:waypoint x="992" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_18eesn2_di" bpmnElement="Flow_18eesn2">
+        <di:waypoint x="410" y="245" />
+        <di:waypoint x="410" y="220" />
+        <di:waypoint x="470" y="220" />
+        <di:waypoint x="470" y="195" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="425" y="234" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0fl34uz_di" bpmnElement="Flow_0fl34uz">
+        <di:waypoint x="410" y="295" />
+        <di:waypoint x="410" y="320" />
+        <di:waypoint x="452" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="419" y="300" width="13" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_04lnpsl_di" bpmnElement="Flow_04lnpsl">
+        <di:waypoint x="1028" y="320" />
+        <di:waypoint x="1060" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0sfs5az_di" bpmnElement="Flow_0sfs5az">
+        <di:waypoint x="1160" y="320" />
+        <di:waypoint x="1210" y="320" />
+        <di:waypoint x="1210" y="400" />
+        <di:waypoint x="860" y="400" />
+        <di:waypoint x="860" y="295" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1j8jani_di" bpmnElement="Flow_1j8jani">
+        <di:waypoint x="885" y="270" />
+        <di:waypoint x="920" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0wdekne_di" bpmnElement="Flow_0wdekne">
+        <di:waypoint x="1230" y="228" />
+        <di:waypoint x="1230" y="300" />
+        <di:waypoint x="1260" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1fmne0o_di" bpmnElement="Flow_1fmne0o">
+        <di:waypoint x="1360" y="300" />
+        <di:waypoint x="1402" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0dov2mc_di" bpmnElement="Flow_0dov2mc">
+        <di:waypoint x="810" y="270" />
+        <di:waypoint x="835" y="270" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
