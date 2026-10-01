@@ -4,7 +4,7 @@ Lab project for the **[Camunda 8 - Testing Processes with CPT (Java)](https://ac
 
 This course gives a detailed hands-on experience on testing processes using Camunda. During the course, you will review basic and advanced testing approaches - including process tests and mocked worker behavior - to better understand how to validate process applications and improve test reliability.
 
-> **Difficulty**: Intermediate | **Time**: ~2 hours | **Platform**: Camunda 8.9.0+
+> **Difficulty**: Intermediate | **Time**: ~2 hours | **Platform**: Camunda 8.10.0+
 
 ## Overview
 
